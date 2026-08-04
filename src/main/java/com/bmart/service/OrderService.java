@@ -4,6 +4,7 @@ import com.bmart.dto.OrderRequest;
 import com.bmart.entity.*;
 import com.bmart.repository.OrderRepository;
 import com.bmart.repository.UserRepository;
+import com.bmart.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final PaymentService paymentService;
     private final NotificationService notificationService;
+    private final PaymentRepository paymentRepository;
 
     public Order createOrderFromCart(String email, OrderRequest request) {
         User user = userRepository.findByEmail(email)
@@ -64,11 +66,26 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        // Generate Razorpay Order ID
-        paymentService.createRazorpayOrder(order);
+        String paymentMode = request.getPaymentMode() != null ? request.getPaymentMode() : "RAZORPAY";
 
-        // Clear user cart
-        cartService.clearCart(email);
+        if ("COD".equalsIgnoreCase(paymentMode)) {
+            order.setStatus("CONFIRMED");
+            orderRepository.save(order);
+
+            Payment payment = Payment.builder()
+                    .order(order)
+                    .razorpayOrderId("COD-" + System.currentTimeMillis())
+                    .amount(order.getTotalAmount())
+                    .status("SUCCESS")
+                    .paymentMode("COD")
+                    .build();
+            paymentRepository.save(payment);
+
+            cartService.clearCart(email);
+        } else {
+            // Generate Razorpay Order ID
+            paymentService.createRazorpayOrder(order);
+        }
 
         // Send notification
         notificationService.createNotification(user, "Order Placed Successfully", "Your order #" + order.getOrderId() + " has been placed.");

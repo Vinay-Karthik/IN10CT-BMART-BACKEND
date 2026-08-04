@@ -11,12 +11,14 @@ import com.bmart.repository.ProductRepository;
 import com.bmart.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CartService {
 
     private final CartRepository cartRepository;
@@ -72,13 +74,14 @@ public class CartService {
         }
 
         if (quantity <= 0) {
+            cart.getCartItems().remove(cartItem);
             cartItemRepository.delete(cartItem);
         } else {
             cartItem.setQuantity(quantity);
             cartItemRepository.save(cartItem);
         }
 
-        return getOrCreateCart(email);
+        return cart;
     }
 
     public Cart removeCartItem(String email, Long itemId) {
@@ -90,12 +93,14 @@ public class CartService {
             throw new RuntimeException("Unauthorized cart item access");
         }
 
+        cart.getCartItems().remove(cartItem);
         cartItemRepository.delete(cartItem);
-        return getOrCreateCart(email);
+        return cart;
     }
 
     public void clearCart(String email) {
         Cart cart = getOrCreateCart(email);
         cartItemRepository.deleteAll(cart.getCartItems());
+        cart.getCartItems().clear();
     }
 }
