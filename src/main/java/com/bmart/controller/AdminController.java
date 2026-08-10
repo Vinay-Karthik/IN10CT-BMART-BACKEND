@@ -158,4 +158,43 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getSiteAnalytics() {
         return ResponseEntity.ok(ApiResponse.success("Platform site analytics", adminService.getSiteAnalytics()));
     }
+
+    @GetMapping("/audit-logs")
+    public ResponseEntity<ApiResponse<List<AuditLog>>> getAuditLogs() {
+        return ResponseEntity.ok(ApiResponse.success("Platform audit logs", adminService.getAuditLogs()));
+    }
+
+    @PutMapping("/users/{id}")
+    public ResponseEntity<ApiResponse<User>> updateUser(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody User updateData
+    ) {
+        User user = adminService.updateUser(userDetails.getUsername(), id, updateData);
+        return ResponseEntity.ok(ApiResponse.success("User updated successfully", user));
+    }
+
+    @GetMapping("/products")
+    public ResponseEntity<ApiResponse<List<Product>>> getAllProducts() {
+        return ResponseEntity.ok(ApiResponse.success("All products list", adminService.getAllProducts()));
+    }
+
+    @PutMapping("/products/{id}")
+    public ResponseEntity<ApiResponse<Product>> updateProduct(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody Product updateData
+    ) {
+        Product product = adminService.updateProduct(userDetails.getUsername(), id, updateData);
+        return ResponseEntity.ok(ApiResponse.success("Product updated successfully", product));
+    }
+
+    @DeleteMapping("/products/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteProduct(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id
+    ) {
+        adminService.deleteProduct(userDetails.getUsername(), id);
+        return ResponseEntity.ok(ApiResponse.success("Product deleted successfully"));
+    }
 }

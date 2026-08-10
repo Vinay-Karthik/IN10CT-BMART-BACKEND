@@ -221,4 +221,84 @@ public class AdminService {
         site.put("totalOrders", totalOrders);
         return site;
     }
+
+    public List<AuditLog> getAuditLogs() {
+        return auditLogRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "timestamp"));
+    }
+
+    @Transactional
+    public User updateUser(String adminEmail, Long userId, User updateData) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+
+        user.setFullName(updateData.getFullName());
+        user.setUsername(updateData.getUsername());
+        user.setEmail(updateData.getEmail());
+        user.setPhoneNumber(updateData.getPhoneNumber());
+        user.setRole(updateData.getRole().trim().toUpperCase());
+        user.setStatus(updateData.getStatus().trim().toUpperCase());
+        
+        User saved = userRepository.save(user);
+
+        auditLogRepository.save(AuditLog.builder()
+                .adminEmail(adminEmail)
+                .action("UPDATE_USER")
+                .targetType("USER")
+                .targetId(String.valueOf(userId))
+                .reason("Administrative update of user data fields")
+                .build());
+
+        return saved;
+    }
+
+    public List<Product> getAllProducts() {
+        return productRepository.findAll();
+    }
+
+    @Transactional
+    public Product updateProduct(String adminEmail, Long productId, Product updateData) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with ID: " + productId));
+
+        product.setName(updateData.getName());
+        product.setBrand(updateData.getBrand());
+        product.setPrice(updateData.getPrice());
+        product.setDiscountPrice(updateData.getDiscountPrice());
+        product.setStock(updateData.getStock());
+        product.setStatus(updateData.getStatus().trim().toUpperCase());
+        
+        if (updateData.getCategory() != null && updateData.getCategory().getCategoryId() != null) {
+            Category category = categoryRepository.findById(updateData.getCategory().getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found with ID: " + updateData.getCategory().getCategoryId()));
+            product.setCategory(category);
+        }
+
+        Product saved = productRepository.save(product);
+
+        auditLogRepository.save(AuditLog.builder()
+                .adminEmail(adminEmail)
+                .action("UPDATE_PRODUCT")
+                .targetType("PRODUCT")
+                .targetId(String.valueOf(productId))
+                .reason("Administrative update of product details")
+                .build());
+
+        return saved;
+    }
+
+    @Transactional
+    public void deleteProduct(String adminEmail, Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with ID: " + productId));
+        
+        productRepository.delete(product);
+
+        auditLogRepository.save(AuditLog.builder()
+                .adminEmail(adminEmail)
+                .action("DELETE_PRODUCT")
+                .targetType("PRODUCT")
+                .targetId(String.valueOf(productId))
+                .reason("Administrative deletion of product")
+                .build());
+    }
 }

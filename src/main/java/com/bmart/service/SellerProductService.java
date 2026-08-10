@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -87,7 +86,8 @@ public class SellerProductService {
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
         product.setDiscountPrice(dto.getDiscountPrice());
-        if (dto.getBrand() != null) product.setBrand(dto.getBrand().trim());
+        if (dto.getBrand() != null)
+            product.setBrand(dto.getBrand().trim());
         product.setTags(dto.getTags());
         product.setStock(dto.getStock());
         product.setCategory(category);
@@ -109,7 +109,8 @@ public class SellerProductService {
     public Product updateStock(String email, Long productId, Integer stock) {
         Seller seller = getAuthenticatedSeller(email);
         Product product = getProductBelongingToSeller(productId, seller);
-        if (stock < 0) throw new IllegalArgumentException("Stock quantity cannot be negative");
+        if (stock < 0)
+            throw new IllegalArgumentException("Stock quantity cannot be negative");
         product.setStock(stock);
         return productRepository.save(product);
     }
