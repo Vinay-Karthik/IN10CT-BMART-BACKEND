@@ -16,6 +16,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.math.BigDecimal;
 import java.util.List;
 
+import javax.sql.DataSource;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+
 @SpringBootApplication
 @EnableCaching
 public class BMartApplication {
@@ -29,7 +33,8 @@ public class BMartApplication {
             UserRepository userRepository,
             CategoryRepository categoryRepository,
             ProductRepository productRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            DataSource dataSource
     ) {
         return args -> {
             try {
@@ -65,72 +70,18 @@ public class BMartApplication {
                 Category fashion = categoryRepository.findById(4L)
                         .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(4L).categoryName("Fashion Accessories & Wallets").description("Wallets & Fashion Accessories").build()));
 
-                // 3. Seed Catalog Products if empty
-                if (productRepository.count() == 0) {
-                    List<Product> seedProducts = List.of(
-                            Product.builder()
-                                    .name("Dior Medium Lady D-Lite Bag")
-                                    .description("Cannage embroidery luxury handbag crafted in premium fabric with pale gold-finish metal charms.")
-                                    .price(new BigDecimal("4500.00"))
-                                    .stock(25)
-                                    .imageUrl("https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=800&auto=format&fit=crop")
-                                    .brand("Christian Dior")
-                                    .category(handbags)
-                                    .status("APPROVED")
-                                    .build(),
-                            Product.builder()
-                                    .name("Gucci GG Marmont Matelassé Shoulder Bag")
-                                    .description("Iconic matelassé chevron leather shoulder bag featuring Double G emblem hardware.")
-                                    .price(new BigDecimal("3800.00"))
-                                    .stock(18)
-                                    .imageUrl("https://images.unsplash.com/photo-1591561954557-26941169b49e?q=80&w=800&auto=format&fit=crop")
-                                    .brand("Gucci")
-                                    .category(handbags)
-                                    .status("APPROVED")
-                                    .build(),
-                            Product.builder()
-                                    .name("Louis Vuitton Neverfull MM Tote")
-                                    .description("Timeless Monogram canvas tote with natural cowhide leather trim and side laces.")
-                                    .price(new BigDecimal("5200.00"))
-                                    .stock(15)
-                                    .imageUrl("https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=800&auto=format&fit=crop")
-                                    .brand("Louis Vuitton")
-                                    .category(handbags)
-                                    .status("APPROVED")
-                                    .build(),
-                            Product.builder()
-                                    .name("Prada Re-Edition Nylon Shoulder Bag")
-                                    .description("Sleek black Re-Nylon shoulder bag with enamel triangle logo and chain handle.")
-                                    .price(new BigDecimal("2900.00"))
-                                    .stock(30)
-                                    .imageUrl("https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?q=80&w=800&auto=format&fit=crop")
-                                    .brand("Prada")
-                                    .category(handbags)
-                                    .status("APPROVED")
-                                    .build(),
-                            Product.builder()
-                                    .name("Executive Leather Tech Backpack")
-                                    .description("Water-resistant full-grain leather backpack with padded 16-inch laptop compartment.")
-                                    .price(new BigDecimal("3200.00"))
-                                    .stock(20)
-                                    .imageUrl("https://images.unsplash.com/photo-1553062407-98eeb64c6a62?q=80&w=800&auto=format&fit=crop")
-                                    .brand("B-MART Executive")
-                                    .category(tech)
-                                    .status("APPROVED")
-                                    .build(),
-                            Product.builder()
-                                    .name("Classic Weekender Travel Duffle")
-                                    .description("Spacious canvas and leather weekender duffle bag with detachable shoulder strap.")
-                                    .price(new BigDecimal("4100.00"))
-                                    .stock(12)
-                                    .imageUrl("https://images.unsplash.com/photo-1547949003-9792a18a2601?q=80&w=800&auto=format&fit=crop")
-                                    .brand("B-MART Travel")
-                                    .category(travel)
-                                    .status("APPROVED")
-                                    .build()
-                    );
-                    productRepository.saveAll(seedProducts);
-                    System.out.println(">>> B-MART Seeded " + seedProducts.size() + " products successfully!");
+                // 3. Auto-import all 4 SQL product files (backpacks, handbags, travelbags, wallets)
+                try {
+                    ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
+                    populator.setContinueOnError(true);
+                    populator.addScript(new ClassPathResource("insert_backpacks.sql"));
+                    populator.addScript(new ClassPathResource("insert_handbags.sql"));
+                    populator.addScript(new ClassPathResource("insert_travelbags.sql"));
+                    populator.addScript(new ClassPathResource("insert_wallets.sql"));
+                    populator.execute(dataSource);
+                    System.out.println(">>> B-MART Auto-Imported all SQL products successfully!");
+                } catch (Exception popErr) {
+                    System.err.println("WARN: Could not execute SQL scripts: " + popErr.getMessage());
                 }
             } catch (Exception e) {
                 System.err.println("WARN: Database seeding encountered non-fatal error: " + e.getMessage());
