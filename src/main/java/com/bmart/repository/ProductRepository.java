@@ -16,7 +16,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @EntityGraph(attributePaths = {"category", "seller"})
     @Query("SELECT p FROM Product p WHERE " +
-           "(p.status IS NULL OR (p.status != 'DELETED' AND p.status != 'BANNED')) AND " +
+           "(p.status IS NULL OR p.status != 'DELETED') AND " +
            "(:categoryId IS NULL OR p.category.categoryId = :categoryId) AND " +
            "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
            "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
