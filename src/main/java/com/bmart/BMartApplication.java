@@ -20,39 +20,43 @@ public class BMartApplication {
     @Bean
     public CommandLineRunner initDatabase(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            String encodedPassword = passwordEncoder.encode("Admin@123");
+            try {
+                String encodedPassword = passwordEncoder.encode("Admin@123");
 
-            // Seed or update Admin Account with Admin@123 password
-            var existingAdminOpt = userRepository.findByEmailOrUsername("admin@bmart.com", "admin");
-            if (existingAdminOpt.isEmpty()) {
-                User admin = User.builder()
-                        .email("admin@bmart.com")
-                        .username("admin")
-                        .password(encodedPassword)
-                        .role("ADMIN")
-                        .status("ACTIVE")
-                        .isVerified(true)
-                        .fullName("B-MART System Admin")
-                        .phoneNumber("9999999999")
-                        .build();
-                userRepository.save(admin);
-            } else {
-                User admin = existingAdminOpt.get();
-                admin.setPassword(encodedPassword);
-                userRepository.save(admin);
+                // Seed or update Admin Account with Admin@123 password
+                var existingAdminOpt = userRepository.findByEmailOrUsername("admin@bmart.com", "admin");
+                if (existingAdminOpt.isEmpty()) {
+                    User admin = User.builder()
+                            .email("admin@bmart.com")
+                            .username("admin")
+                            .password(encodedPassword)
+                            .role("ADMIN")
+                            .status("ACTIVE")
+                            .isVerified(true)
+                            .fullName("B-MART System Admin")
+                            .phoneNumber("9999999999")
+                            .build();
+                    userRepository.save(admin);
+                } else {
+                    User admin = existingAdminOpt.get();
+                    admin.setPassword(encodedPassword);
+                    userRepository.save(admin);
+                }
+
+                // Ensure all existing user accounts have an active status if missing
+                userRepository.findAll().forEach(u -> {
+                    boolean changed = false;
+                    if (u.getStatus() == null || u.getStatus().isEmpty()) {
+                        u.setStatus("ACTIVE");
+                        changed = true;
+                    }
+                    if (changed) {
+                        userRepository.save(u);
+                    }
+                });
+            } catch (Exception e) {
+                System.err.println("WARN: Database seeding encountered non-fatal error: " + e.getMessage());
             }
-
-            // Ensure all existing user accounts have an active status if missing
-            userRepository.findAll().forEach(u -> {
-                boolean changed = false;
-                if (u.getStatus() == null || u.getStatus().isEmpty()) {
-                    u.setStatus("ACTIVE");
-                    changed = true;
-                }
-                if (changed) {
-                    userRepository.save(u);
-                }
-            });
         };
     }
 }
