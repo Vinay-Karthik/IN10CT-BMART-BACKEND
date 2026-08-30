@@ -12,7 +12,7 @@ import java.time.Duration;
 @Service
 public class GroqService {
 
-    @Value("${groq.api.key}")
+    @Value("${groq.api.key:dummy_groq_key}")
     private String groqApiKey;
 
     @Value("${groq.model:llama-3.3-70b-versatile}")

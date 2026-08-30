@@ -20,13 +20,13 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class PaymentService {
 
-    @Value("${razorpay.key-id}")
+    @Value("${razorpay.key-id:rzp_test_BMartDummyKey123}")
     private String razorpayKeyId;
 
-    @Value("${razorpay.key-secret}")
+    @Value("${razorpay.key-secret:dummyRazorpaySecretKey12345}")
     private String razorpayKeySecret;
 
-    @Value("${razorpay.webhook-secret}")
+    @Value("${razorpay.webhook-secret:dummyWebhookSecret12345}")
     private String razorpayWebhookSecret;
 
     private final OrderRepository orderRepository;
