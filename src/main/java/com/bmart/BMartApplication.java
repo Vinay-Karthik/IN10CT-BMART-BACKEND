@@ -76,7 +76,7 @@ public class BMartApplication {
                                     .imageUrl("https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=800&auto=format&fit=crop")
                                     .brand("Christian Dior")
                                     .category(handbags)
-                                    .isActive(true)
+                                    .status("APPROVED")
                                     .build(),
                             Product.builder()
                                     .name("Gucci GG Marmont Matelassé Shoulder Bag")
@@ -86,7 +86,7 @@ public class BMartApplication {
                                     .imageUrl("https://images.unsplash.com/photo-1591561954557-26941169b49e?q=80&w=800&auto=format&fit=crop")
                                     .brand("Gucci")
                                     .category(handbags)
-                                    .isActive(true)
+                                    .status("APPROVED")
                                     .build(),
                             Product.builder()
                                     .name("Louis Vuitton Neverfull MM Tote")
@@ -96,7 +96,7 @@ public class BMartApplication {
                                     .imageUrl("https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=800&auto=format&fit=crop")
                                     .brand("Louis Vuitton")
                                     .category(handbags)
-                                    .isActive(true)
+                                    .status("APPROVED")
                                     .build(),
                             Product.builder()
                                     .name("Prada Re-Edition Nylon Shoulder Bag")
@@ -106,7 +106,7 @@ public class BMartApplication {
                                     .imageUrl("https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?q=80&w=800&auto=format&fit=crop")
                                     .brand("Prada")
                                     .category(handbags)
-                                    .isActive(true)
+                                    .status("APPROVED")
                                     .build(),
                             Product.builder()
                                     .name("Executive Leather Tech Backpack")
@@ -116,7 +116,7 @@ public class BMartApplication {
                                     .imageUrl("https://images.unsplash.com/photo-1553062407-98eeb64c6a62?q=80&w=800&auto=format&fit=crop")
                                     .brand("B-MART Executive")
                                     .category(tech)
-                                    .isActive(true)
+                                    .status("APPROVED")
                                     .build(),
                             Product.builder()
                                     .name("Classic Weekender Travel Duffle")
@@ -126,7 +126,7 @@ public class BMartApplication {
                                     .imageUrl("https://images.unsplash.com/photo-1547949003-9792a18a2601?q=80&w=800&auto=format&fit=crop")
                                     .brand("B-MART Travel")
                                     .category(travel)
-                                    .isActive(true)
+                                    .status("APPROVED")
                                     .build()
                     );
                     productRepository.saveAll(seedProducts);
