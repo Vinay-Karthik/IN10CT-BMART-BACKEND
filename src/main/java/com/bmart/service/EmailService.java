@@ -14,7 +14,7 @@ public class EmailService {
     private final String fromEmail;
 
     public EmailService(
-            JavaMailSender mailSender,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) JavaMailSender mailSender,
             @Value("${spring.mail.username:anilworks321@gmail.com}") String fromEmail
     ) {
         this.mailSender = mailSender;
@@ -22,6 +22,10 @@ public class EmailService {
     }
 
     public boolean sendOtpEmail(String toEmail, String otp, String purpose) {
+        if (mailSender == null) {
+            log.info("[Mock Mail Gateway] JavaMailSender not configured. OTP for {} is: {}", toEmail, otp);
+            return true;
+        }
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
