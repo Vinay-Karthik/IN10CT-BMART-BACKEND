@@ -14,13 +14,13 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    @Value("${app.jwt.secret}")
+    @Value("${app.jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
     private String jwtSecret;
 
-    @Value("${app.jwt.expiration-ms}")
+    @Value("${app.jwt.expiration-ms:86400000}")
     private long jwtExpirationMs;
 
-    @Value("${app.jwt.refresh-expiration-ms}")
+    @Value("${app.jwt.refresh-expiration-ms:604800000}")
     private long jwtRefreshExpirationMs;
 
     private SecretKey key() {
