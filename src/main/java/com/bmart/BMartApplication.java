@@ -94,6 +94,16 @@ public class BMartApplication {
                 } catch (Exception popErr) {
                     System.err.println("WARN: Could not execute SQL scripts: " + popErr.getMessage());
                 }
+
+                // 4. Clean up duplicate products keeping only 1 unique item per name
+                try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
+                    int deletedDuplicates = stmt.executeUpdate(
+                        "DELETE p1 FROM products p1 INNER JOIN products p2 ON LOWER(p1.name) = LOWER(p2.name) AND p1.product_id > p2.product_id"
+                    );
+                    System.out.println(">>> Cleaned up " + deletedDuplicates + " duplicate products from database!");
+                } catch (Exception dedupErr) {
+                    System.err.println("WARN: Could not execute product deduplication: " + dedupErr.getMessage());
+                }
             } catch (Exception e) {
                 System.err.println("WARN: Database seeding encountered non-fatal error: " + e.getMessage());
             }
