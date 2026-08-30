@@ -46,4 +46,20 @@ public class NotificationService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return notificationRepository.countByUserUserIdAndIsReadFalse(user.getUserId());
     }
+
+    public void markAllAsRead(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        List<Notification> notifications = notificationRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId());
+        notifications.forEach(n -> n.setRead(true));
+        notificationRepository.saveAll(notifications);
+    }
+
+    public void deleteNotification(Long notificationId, String email) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
+        if (notification.getUser().getEmail().equals(email)) {
+            notificationRepository.delete(notification);
+        }
+    }
 }

@@ -21,7 +21,8 @@ public class Order {
     private String orderId; // e.g. ORD-172223-XXXX
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
+    @org.hibernate.annotations.NotFound(action = org.hibernate.annotations.NotFoundAction.IGNORE)
     private User user;
 
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
@@ -38,6 +39,12 @@ public class Order {
 
     @Column(name = "razorpay_payment_id")
     private String razorpayPaymentId;
+
+    @Column(name = "payment_mode")
+    private String paymentMode; // RAZORPAY, COD
+
+    @Column(name = "payment_status")
+    private String paymentStatus; // PENDING, SUCCESS, FAILED, COMPLETED
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default

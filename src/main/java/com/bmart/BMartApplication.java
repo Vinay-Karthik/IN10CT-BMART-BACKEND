@@ -20,29 +20,39 @@ public class BMartApplication {
     @Bean
     public CommandLineRunner initDatabase(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            String encodedPassword = passwordEncoder.encode("Anil@3616");
+            String encodedPassword = passwordEncoder.encode("Admin@123");
 
-            // Seed / Update Admin Account
-            User admin = userRepository.findByEmail("admin@bmart.com")
-                .orElseGet(() -> User.builder().email("admin@bmart.com").username("admin").build());
-            admin.setPassword(encodedPassword);
-            admin.setRole("ROLE_ADMIN");
-            admin.setStatus("ACTIVE");
-            admin.setVerified(true);
-            admin.setFullName("B-MART System Admin");
-            admin.setPhoneNumber("9999999999");
-            userRepository.save(admin);
+            // Seed or update Admin Account with Admin@123 password
+            var existingAdminOpt = userRepository.findByEmailOrUsername("admin@bmart.com", "admin");
+            if (existingAdminOpt.isEmpty()) {
+                User admin = User.builder()
+                        .email("admin@bmart.com")
+                        .username("admin")
+                        .password(encodedPassword)
+                        .role("ADMIN")
+                        .status("ACTIVE")
+                        .isVerified(true)
+                        .fullName("B-MART System Admin")
+                        .phoneNumber("9999999999")
+                        .build();
+                userRepository.save(admin);
+            } else {
+                User admin = existingAdminOpt.get();
+                admin.setPassword(encodedPassword);
+                userRepository.save(admin);
+            }
 
-            // Seed / Update Customer Account
-            User customer = userRepository.findByEmail("anilworks321@gmail.com")
-                .orElseGet(() -> User.builder().email("anilworks321@gmail.com").username("anil123").build());
-            customer.setPassword(encodedPassword);
-            customer.setRole("ROLE_USER");
-            customer.setStatus("ACTIVE");
-            customer.setVerified(true);
-            customer.setFullName("Anil Hosalli");
-            customer.setPhoneNumber("8431811670");
-            userRepository.save(customer);
+            // Ensure all existing user accounts have an active status if missing
+            userRepository.findAll().forEach(u -> {
+                boolean changed = false;
+                if (u.getStatus() == null || u.getStatus().isEmpty()) {
+                    u.setStatus("ACTIVE");
+                    changed = true;
+                }
+                if (changed) {
+                    userRepository.save(u);
+                }
+            });
         };
     }
 }

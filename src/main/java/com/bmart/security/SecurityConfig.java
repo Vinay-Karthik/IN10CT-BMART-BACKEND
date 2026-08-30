@@ -47,9 +47,16 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(e -> e.authenticationEntryPoint((request, response, authException) -> {
+                response.setContentType("application/json");
+                response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("{\"success\":false,\"message\":\"Session expired or unauthenticated. Please sign in.\",\"data\":null}");
+            }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**", "/api/reviews/**").permitAll()
+                .requestMatchers("/api/chatbot/**").permitAll()
+                .requestMatchers("/api/support/**").permitAll()
                 .requestMatchers("/api/payments/webhook", "/api/payments/callback").permitAll()
                 .anyRequest().authenticated()
             )

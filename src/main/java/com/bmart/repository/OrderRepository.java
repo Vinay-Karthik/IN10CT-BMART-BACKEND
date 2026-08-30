@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface OrderRepository extends JpaRepository<Order, String> {
     List<Order> findByUserUserIdOrderByCreatedAtDesc(Long userId);
     Optional<Order> findByRazorpayOrderId(String razorpayOrderId);
+    List<Order> findByCreatedAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

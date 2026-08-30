@@ -6,6 +6,7 @@ import com.bmart.entity.Cart;
 import com.bmart.service.CartService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +21,10 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Cart>> getCart(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("User not authenticated"));
+        }
         return ResponseEntity.ok(ApiResponse.success("Cart retrieved successfully", cartService.getOrCreateCart(userDetails.getUsername())));
     }
 
@@ -28,6 +33,10 @@ public class CartController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CartItemRequest request
     ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("User not authenticated"));
+        }
         return ResponseEntity.ok(ApiResponse.success("Item added to cart", cartService.addToCart(userDetails.getUsername(), request)));
     }
 
@@ -37,6 +46,10 @@ public class CartController {
             @PathVariable Long itemId,
             @RequestParam Integer quantity
     ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("User not authenticated"));
+        }
         return ResponseEntity.ok(ApiResponse.success("Cart item quantity updated", cartService.updateCartItemQuantity(userDetails.getUsername(), itemId, quantity)));
     }
 
@@ -45,11 +58,19 @@ public class CartController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long itemId
     ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("User not authenticated"));
+        }
         return ResponseEntity.ok(ApiResponse.success("Item removed from cart", cartService.removeCartItem(userDetails.getUsername(), itemId)));
     }
 
     @DeleteMapping("/clear")
     public ResponseEntity<ApiResponse<String>> clearCart(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("User not authenticated"));
+        }
         cartService.clearCart(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Cart cleared"));
     }

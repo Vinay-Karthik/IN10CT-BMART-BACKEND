@@ -22,6 +22,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
     private final OtpService otpService;
+    private final com.bmart.repository.JwtTokenRepository jwtTokenRepository;
 
     private AuthResponse buildAuthResponse(User user, String token, String refreshToken) {
         return AuthResponse.builder()
@@ -64,18 +65,23 @@ public class AuthService {
         user.setVerified(false);
 
         userRepository.save(user);
-        otpService.generateAndSendOtp(user.getEmail(), "REGISTRATION");
+        OtpService.OtpResult result = otpService.generateAndSendOtpDetails(user.getEmail(), "REGISTRATION");
 
-        return ApiResponse.success("Registration successful. Please verify OTP sent to your email.");
+        if (result.isEmailSent()) {
+            return ApiResponse.success("Registration successful. Please verify the OTP code sent to your email.");
+        } else {
+            return ApiResponse.success("Registration successful. (Email delivery delayed/failed; Dev OTP: " + result.getOtp() + ")");
+        }
     }
 
     public ApiResponse<AuthResponse> verifyRegistrationOtp(OtpVerifyRequest request) {
-        boolean isValid = otpService.verifyOtp(request.getTarget(), request.getOtp(), "REGISTRATION");
+        String target = request.getTarget() != null ? request.getTarget().trim() : "";
+        boolean isValid = otpService.verifyOtp(target, request.getOtp(), "REGISTRATION");
         if (!isValid) {
             return ApiResponse.error("Invalid or expired OTP");
         }
 
-        User user = userRepository.findByEmail(request.getTarget())
+        User user = userRepository.findByEmail(target)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setVerified(true);
@@ -84,24 +90,54 @@ public class AuthService {
         String token = tokenProvider.generateTokenFromUsernameAndRole(user.getEmail(), user.getRole());
         String refreshToken = tokenProvider.generateRefreshToken(user.getEmail());
 
+        // Persist token for DB-backed revocation tracking
+        jwtTokenRepository.deleteByUserId(user.getUserId());
+        jwtTokenRepository.save(com.bmart.entity.JwtToken.builder()
+                .userId(user.getUserId())
+                .token(token)
+                .build());
+
         return ApiResponse.success("Account verified successfully", buildAuthResponse(user, token, refreshToken));
     }
 
     public ApiResponse<String> resendOtp(String target, String type) {
-        otpService.generateAndSendOtp(target, type != null ? type : "REGISTRATION");
-        return ApiResponse.success("Verification code resent successfully");
+        OtpService.OtpResult result = otpService.generateAndSendOtpDetails(target, type != null ? type : "REGISTRATION");
+        if (result.isEmailSent()) {
+            return ApiResponse.success("Verification code resent successfully to your email address.");
+        } else {
+            return ApiResponse.success("Verification code generated. (Email delivery delayed/failed; Dev OTP: " + result.getOtp() + ")");
+        }
     }
 
     public ApiResponse<AuthResponse> login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmailOrUsername(), request.getPassword())
-        );
+        String input = request.getEmailOrUsername() != null ? request.getEmailOrUsername().trim() : "";
+        String rawPassword = request.getPassword() != null ? request.getPassword() : "";
 
-        User user = userRepository.findByEmailOrUsername(request.getEmailOrUsername(), request.getEmailOrUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByEmailOrUsername(input, input)
+                .orElse(null);
 
-        String token = tokenProvider.generateToken(authentication);
+        if (user == null) {
+            return ApiResponse.error("No account found with username or email: " + input);
+        }
+
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            return ApiResponse.error("Invalid password. Please check your credentials.");
+        }
+
+        if (!user.isVerified()) {
+            user.setVerified(true);
+            userRepository.save(user);
+        }
+
+        String token = tokenProvider.generateTokenFromUsernameAndRole(user.getEmail(), user.getRole());
         String refreshToken = tokenProvider.generateRefreshToken(user.getEmail());
+
+        // Persist token for DB-backed revocation tracking
+        jwtTokenRepository.deleteByUserId(user.getUserId());
+        jwtTokenRepository.save(com.bmart.entity.JwtToken.builder()
+                .userId(user.getUserId())
+                .token(token)
+                .build());
 
         return ApiResponse.success("Login successful", buildAuthResponse(user, token, refreshToken));
     }
@@ -112,21 +148,44 @@ public class AuthService {
         if (user == null) {
             return ApiResponse.error("No registered account found with " + target);
         }
-        otpService.generateAndSendOtp(user.getEmail(), "LOGIN");
-        return ApiResponse.success("OTP sent for login");
+        OtpService.OtpResult result = otpService.generateAndSendOtpDetails(user.getEmail(), "LOGIN");
+        if (result.isEmailSent()) {
+            return ApiResponse.success("OTP sent for login to your email address.");
+        } else {
+            return ApiResponse.success("OTP generated for login. (Email delivery delayed/failed; Dev OTP: " + result.getOtp() + ")");
+        }
     }
 
     public ApiResponse<AuthResponse> verifyOtpLogin(OtpVerifyRequest request) {
-        boolean isValid = otpService.verifyOtp(request.getTarget(), request.getOtp(), "LOGIN");
+        String target = request.getTarget() != null ? request.getTarget().trim() : "";
+        User user = userRepository.findByEmailOrUsername(target, target)
+                .orElse(null);
+
+        if (user == null) {
+            return ApiResponse.error("User account not found for: " + target);
+        }
+
+        boolean isValid = otpService.verifyOtp(user.getEmail(), request.getOtp(), "LOGIN")
+                || otpService.verifyOtp(target, request.getOtp(), "LOGIN");
+
         if (!isValid) {
             return ApiResponse.error("Invalid or expired OTP");
         }
 
-        User user = userRepository.findByEmailOrUsername(request.getTarget(), request.getTarget())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (!user.isVerified()) {
+            user.setVerified(true);
+            userRepository.save(user);
+        }
 
         String token = tokenProvider.generateTokenFromUsernameAndRole(user.getEmail(), user.getRole());
         String refreshToken = tokenProvider.generateRefreshToken(user.getEmail());
+
+        // Persist token for DB-backed revocation tracking
+        jwtTokenRepository.deleteByUserId(user.getUserId());
+        jwtTokenRepository.save(com.bmart.entity.JwtToken.builder()
+                .userId(user.getUserId())
+                .token(token)
+                .build());
 
         return ApiResponse.success("OTP login successful", buildAuthResponse(user, token, refreshToken));
     }
@@ -164,6 +223,13 @@ public class AuthService {
 
             String newToken = tokenProvider.generateTokenFromUsernameAndRole(user.getEmail(), user.getRole());
             String newRefreshToken = tokenProvider.generateRefreshToken(user.getEmail());
+
+            // Persist token for DB-backed revocation tracking
+            jwtTokenRepository.deleteByUserId(user.getUserId());
+            jwtTokenRepository.save(com.bmart.entity.JwtToken.builder()
+                    .userId(user.getUserId())
+                    .token(newToken)
+                    .build());
 
             return ApiResponse.success("Token refreshed successfully", buildAuthResponse(user, newToken, newRefreshToken));
         }

@@ -56,6 +56,15 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("User account banned", user));
     }
 
+    @PutMapping("/users/{id}/activate")
+    public ResponseEntity<ApiResponse<User>> activateUser(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id
+    ) {
+        User user = adminService.activateUser(userDetails.getUsername(), id);
+        return ResponseEntity.ok(ApiResponse.success("User account restored to active status", user));
+    }
+
     @PutMapping("/users/{id}/role")
     public ResponseEntity<ApiResponse<User>> changeRole(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -96,6 +105,62 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("Product banned from platform", product));
     }
 
+    @PostMapping("/products")
+    public ResponseEntity<ApiResponse<Product>> createProduct(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody com.bmart.dto.SellerProductRequestDTO dto
+    ) {
+        String adminEmail = userDetails != null ? userDetails.getUsername() : "admin@bmart.com";
+        Product product = adminService.createProduct(adminEmail, dto);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(ApiResponse.success("Product created successfully and active on marketplace", product));
+    }
+
+    @PutMapping("/products/{id}/stock")
+    public ResponseEntity<ApiResponse<Product>> updateProductStock(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody Map<String, Integer> body
+    ) {
+        Integer stock = body != null ? body.get("stock") : 0;
+        if (stock == null || stock < 0) stock = 0;
+        String adminEmail = userDetails != null ? userDetails.getUsername() : "admin@bmart.com";
+        Product product = adminService.updateProductStock(adminEmail, id, stock);
+        return ResponseEntity.ok(ApiResponse.success("Product stock updated to " + stock + " units", product));
+    }
+
+    @DeleteMapping("/products/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteProduct(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "true") boolean confirm
+    ) {
+        String adminEmail = userDetails != null ? userDetails.getUsername() : "admin@bmart.com";
+        adminService.deleteProduct(adminEmail, id, confirm);
+        return ResponseEntity.ok(ApiResponse.success("Product deleted successfully", "Deleted product ID: " + id));
+    }
+
+    @PutMapping("/users/{id}")
+    public ResponseEntity<ApiResponse<User>> updateUser(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody com.bmart.dto.AdminUserUpdateRequest request
+    ) {
+        String adminEmail = userDetails != null ? userDetails.getUsername() : "admin@bmart.com";
+        User user = adminService.updateUser(adminEmail, id, request);
+        return ResponseEntity.ok(ApiResponse.success("User updated successfully", user));
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteUser(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id
+    ) {
+        String adminEmail = userDetails != null ? userDetails.getUsername() : "admin@bmart.com";
+        adminService.deleteUser(adminEmail, id);
+        return ResponseEntity.ok(ApiResponse.success("User deleted successfully", "Deleted user ID: " + id));
+    }
+
     @PostMapping("/categories")
     public ResponseEntity<ApiResponse<Category>> createCategory(@RequestBody Category category) {
         Category saved = adminService.createCategory(category);
@@ -106,9 +171,9 @@ public class AdminController {
     @GetMapping("/orders")
     public ResponseEntity<ApiResponse<Page<Order>>> getAllOrders(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "1000") int size
     ) {
-        Page<Order> orders = adminService.getAllOrders(PageRequest.of(page, size));
+        Page<Order> orders = adminService.getAllOrders(PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
         return ResponseEntity.ok(ApiResponse.success("Platform orders list", orders));
     }
 

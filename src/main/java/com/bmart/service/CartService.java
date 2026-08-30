@@ -26,9 +26,9 @@ public class CartService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
 
-    public Cart getOrCreateCart(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public Cart getOrCreateCart(String identifier) {
+        User user = userRepository.findByEmailOrUsername(identifier, identifier)
+                .orElseThrow(() -> new RuntimeException("User not found: " + identifier));
 
         return cartRepository.findByUserUserId(user.getUserId())
                 .orElseGet(() -> {
@@ -40,22 +40,35 @@ public class CartService {
                 });
     }
 
-    public Cart addToCart(String email, CartItemRequest request) {
-        Cart cart = getOrCreateCart(email);
+    public Cart addToCart(String identifier, CartItemRequest request) {
+        Cart cart = getOrCreateCart(identifier);
         Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new RuntimeException("Product not found with ID: " + request.getProductId()));
+
+        if (product.getStock() != null && product.getStock() <= 0) {
+            throw new RuntimeException("Product is out of stock");
+        }
+
+        int requestedQty = request.getQuantity() != null && request.getQuantity() > 0 ? request.getQuantity() : 1;
 
         Optional<CartItem> existingItem = cartItemRepository.findByCartCartIdAndProductProductId(cart.getCartId(), product.getProductId());
 
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
-            item.setQuantity(item.getQuantity() + request.getQuantity());
+            int newQuantity = item.getQuantity() + requestedQty;
+            if (product.getStock() != null && newQuantity > product.getStock()) {
+                throw new RuntimeException("Requested quantity exceeds available stock (" + product.getStock() + ")");
+            }
+            item.setQuantity(newQuantity);
             cartItemRepository.save(item);
         } else {
+            if (product.getStock() != null && requestedQty > product.getStock()) {
+                throw new RuntimeException("Requested quantity exceeds available stock (" + product.getStock() + ")");
+            }
             CartItem newItem = CartItem.builder()
                     .cart(cart)
                     .product(product)
-                    .quantity(request.getQuantity())
+                    .quantity(requestedQty)
                     .build();
             cartItemRepository.save(newItem);
             cart.getCartItems().add(newItem);
@@ -64,8 +77,8 @@ public class CartService {
         return cartRepository.findById(cart.getCartId()).orElse(cart);
     }
 
-    public Cart updateCartItemQuantity(String email, Long itemId, Integer quantity) {
-        Cart cart = getOrCreateCart(email);
+    public Cart updateCartItemQuantity(String identifier, Long itemId, Integer quantity) {
+        Cart cart = getOrCreateCart(identifier);
         CartItem cartItem = cartItemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
 
@@ -74,18 +87,21 @@ public class CartService {
         }
 
         if (quantity <= 0) {
-            cart.getCartItems().remove(cartItem);
+            cart.getCartItems().removeIf(item -> item.getId().equals(itemId));
             cartItemRepository.delete(cartItem);
         } else {
+            if (cartItem.getProduct().getStock() != null && quantity > cartItem.getProduct().getStock()) {
+                throw new RuntimeException("Requested quantity exceeds available stock (" + cartItem.getProduct().getStock() + ")");
+            }
             cartItem.setQuantity(quantity);
             cartItemRepository.save(cartItem);
         }
 
-        return cart;
+        return cartRepository.findById(cart.getCartId()).orElse(cart);
     }
 
-    public Cart removeCartItem(String email, Long itemId) {
-        Cart cart = getOrCreateCart(email);
+    public Cart removeCartItem(String identifier, Long itemId) {
+        Cart cart = getOrCreateCart(identifier);
         CartItem cartItem = cartItemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
 
@@ -93,14 +109,15 @@ public class CartService {
             throw new RuntimeException("Unauthorized cart item access");
         }
 
-        cart.getCartItems().remove(cartItem);
+        cart.getCartItems().removeIf(item -> item.getId().equals(itemId));
         cartItemRepository.delete(cartItem);
-        return cart;
+        return cartRepository.findById(cart.getCartId()).orElse(cart);
     }
 
-    public void clearCart(String email) {
-        Cart cart = getOrCreateCart(email);
+    public void clearCart(String identifier) {
+        Cart cart = getOrCreateCart(identifier);
         cartItemRepository.deleteAll(cart.getCartItems());
         cart.getCartItems().clear();
+        cartRepository.save(cart);
     }
 }

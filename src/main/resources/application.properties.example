@@ -1,4 +1,4 @@
-﻿# Server Config
+# Server Config
 server.port=8080
 server.servlet.context-path=/
 # Database Configuration (MySQL)
@@ -33,3 +33,7 @@ sms.twilio.from-number=${TWILIO_FROM_NUMBER:your_twilio_number}
 razorpay.key-id=${RAZORPAY_KEY_ID:rzp_test_BMartDummyKey123}
 razorpay.key-secret=${RAZORPAY_KEY_SECRET:dummyRazorpaySecretKey12345}
 razorpay.webhook-secret=${RAZORPAY_WEBHOOK_SECRET:dummyWebhookSecret12345}
+
+# Groq AI Config
+groq.api.key=${GROQ_API_KEY:your_groq_api_key_here}
+groq.model=${GROQ_MODEL:llama-3.3-70b-versatile}

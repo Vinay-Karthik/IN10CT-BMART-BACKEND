@@ -2,11 +2,14 @@ package com.bmart.controller;
 
 import com.bmart.dto.ApiResponse;
 import com.bmart.dto.PaymentVerificationRequest;
+import com.bmart.entity.Payment;
 import com.bmart.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -28,6 +31,21 @@ public class PaymentController {
         } else {
             return ResponseEntity.badRequest().body(ApiResponse.error("Payment verification failed"));
         }
+    }
+
+    @PostMapping("/fail")
+    public ResponseEntity<ApiResponse<Boolean>> markPaymentFailed(@RequestBody Map<String, String> body) {
+        String orderId = body.get("orderId");
+        String reason = body.getOrDefault("reason", "User cancelled or payment failed");
+        boolean updated = paymentService.markPaymentFailed(orderId, reason);
+        return ResponseEntity.ok(ApiResponse.success("Payment status updated to failed", updated));
+    }
+
+    @GetMapping("/order/{orderId}")
+    public ResponseEntity<ApiResponse<Payment>> getPaymentByOrderId(@PathVariable String orderId) {
+        return paymentService.getPaymentByOrderId(orderId)
+                .map(payment -> ResponseEntity.ok(ApiResponse.success("Payment details retrieved", payment)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/webhook")

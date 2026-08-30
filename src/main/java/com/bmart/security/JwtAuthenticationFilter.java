@@ -22,6 +22,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
     private final CustomUserDetailsService customUserDetailsService;
+    private final com.bmart.repository.JwtTokenRepository jwtTokenRepository;
 
     @Override
     protected void doFilterInternal(
@@ -33,6 +34,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
+                // Check if token exists in database (not deleted by logout)
+                if (jwtTokenRepository.count() > 0 && jwtTokenRepository.findByToken(jwt).isEmpty()) {
+                    logger.info("JWT token has been revoked/deleted via logout.");
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 io.jsonwebtoken.Claims claims = tokenProvider.getClaimsFromJWT(jwt);
                 String username = claims.getSubject();
                 String role = claims.get("role", String.class);

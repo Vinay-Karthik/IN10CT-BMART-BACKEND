@@ -5,6 +5,7 @@ import com.bmart.entity.*;
 import com.bmart.repository.OrderRepository;
 import com.bmart.repository.UserRepository;
 import com.bmart.repository.PaymentRepository;
+import com.bmart.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,9 +24,11 @@ public class OrderService {
     private final PaymentService paymentService;
     private final NotificationService notificationService;
     private final PaymentRepository paymentRepository;
+    private final ProductRepository productRepository;
 
+    @org.springframework.transaction.annotation.Transactional
     public Order createOrderFromCart(String email, OrderRequest request) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailOrUsername(email, email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Cart cart = cartService.getOrCreateCart(email);
@@ -47,14 +50,25 @@ public class OrderService {
                 .build();
 
         for (CartItem cartItem : cart.getCartItems()) {
-            BigDecimal itemTotal = cartItem.getProduct().getPrice().multiply(new BigDecimal(cartItem.getQuantity()));
+            Product product = cartItem.getProduct();
+            int purchasedQty = cartItem.getQuantity();
+
+            if (product != null) {
+                int currentStock = product.getStock() != null ? product.getStock() : 0;
+                int updatedStock = Math.max(0, currentStock - purchasedQty);
+                product.setStock(updatedStock);
+                productRepository.save(product);
+            }
+
+            BigDecimal itemTotal = (product != null && product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO)
+                    .multiply(new BigDecimal(purchasedQty));
             totalAmount = totalAmount.add(itemTotal);
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
-                    .product(cartItem.getProduct())
-                    .quantity(cartItem.getQuantity())
-                    .pricePerUnit(cartItem.getProduct().getPrice())
+                    .product(product)
+                    .quantity(purchasedQty)
+                    .pricePerUnit(product != null ? product.getPrice() : BigDecimal.ZERO)
                     .totalPrice(itemTotal)
                     .build();
 
@@ -64,31 +78,25 @@ public class OrderService {
         order.setTotalAmount(totalAmount);
         order.setOrderItems(orderItems);
 
-        orderRepository.save(order);
-
-        String paymentMode = request.getPaymentMode() != null ? request.getPaymentMode() : "RAZORPAY";
-
+        String paymentMode = request.getPaymentMode() != null ? request.getPaymentMode().toUpperCase() : "RAZORPAY";
         if ("COD".equalsIgnoreCase(paymentMode)) {
+            // Add COD Handling & Delivery Fee of ₹49
+            totalAmount = totalAmount.add(new BigDecimal("49.00"));
+            order.setTotalAmount(totalAmount);
             order.setStatus("CONFIRMED");
+            order.setPaymentStatus("SUCCESS");
             orderRepository.save(order);
-
-            Payment payment = Payment.builder()
-                    .order(order)
-                    .razorpayOrderId("COD-" + System.currentTimeMillis())
-                    .amount(order.getTotalAmount())
-                    .status("SUCCESS")
-                    .paymentMode("COD")
-                    .build();
-            paymentRepository.save(payment);
-
+            paymentService.createCodPayment(order);
             cartService.clearCart(email);
+            // Send notification for COD
+            notificationService.createNotification(user, "Order Placed Successfully", "Your order #" + order.getOrderId() + " has been placed (COD).");
         } else {
-            // Generate Razorpay Order ID
+            order.setTotalAmount(totalAmount);
+            order.setStatus("PENDING_PAYMENT");
+            order.setPaymentStatus("PENDING");
+            orderRepository.save(order);
             paymentService.createRazorpayOrder(order);
         }
-
-        // Send notification
-        notificationService.createNotification(user, "Order Placed Successfully", "Your order #" + order.getOrderId() + " has been placed.");
 
         return order;
     }

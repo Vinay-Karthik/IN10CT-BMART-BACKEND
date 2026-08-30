@@ -12,5 +12,6 @@ public class OrderRequest {
     @NotBlank(message = "Shipping address is required")
     private String shippingAddress;
 
-    private String paymentMode; // e.g., RAZORPAY or COD
+    @Builder.Default
+    private String paymentMode = "RAZORPAY";
 }

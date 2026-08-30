@@ -3,12 +3,14 @@ package com.bmart.service;
 import com.bmart.entity.OtpVerification;
 import com.bmart.repository.OtpVerificationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class OtpService {
 
@@ -17,7 +19,20 @@ public class OtpService {
     private final SmsService smsService;
     private final SecureRandom random = new SecureRandom();
 
-    public String generateAndSendOtp(String target, String type) {
+    public static class OtpResult {
+        private final String otp;
+        private final boolean emailSent;
+
+        public OtpResult(String otp, boolean emailSent) {
+            this.otp = otp;
+            this.emailSent = emailSent;
+        }
+
+        public String getOtp() { return otp; }
+        public boolean isEmailSent() { return emailSent; }
+    }
+
+    public OtpResult generateAndSendOtpDetails(String target, String type) {
         String otp = String.format("%06d", random.nextInt(1000000));
         
         OtpVerification otpVerification = OtpVerification.builder()
@@ -30,13 +45,21 @@ public class OtpService {
         
         otpRepository.save(otpVerification);
 
+        log.info("\n========================================\n>>> B-MART VERIFICATION OTP FOR [{}]: [{}]\n========================================", target, otp);
+        System.out.println(">>> B-MART VERIFICATION OTP FOR [" + target + "]: [" + otp + "]");
+
+        boolean emailSent = true;
         if (target.contains("@")) {
-            emailService.sendOtpEmail(target, otp, type);
+            emailSent = emailService.sendOtpEmail(target, otp, type);
         } else {
             smsService.sendSmsOtp(target, otp);
         }
 
-        return otp;
+        return new OtpResult(otp, emailSent);
+    }
+
+    public String generateAndSendOtp(String target, String type) {
+        return generateAndSendOtpDetails(target, type).getOtp();
     }
 
     public boolean verifyOtp(String target, String otp, String type) {

@@ -17,15 +17,15 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Cacheable(value = "users", key = "#email")
-    public User getProfile(String email) {
-        return userRepository.findByEmail(email)
+    @Cacheable(value = "users", key = "#identifier")
+    public User getProfile(String identifier) {
+        return userRepository.findByEmailOrUsername(identifier, identifier)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    @CacheEvict(value = "users", key = "#email")
-    public User updateProfile(String email, Map<String, String> data) {
-        User user = getProfile(email);
+    @CacheEvict(value = "users", allEntries = true)
+    public User updateProfile(String identifier, Map<String, String> data) {
+        User user = getProfile(identifier);
 
         if (data.containsKey("fullName")) user.setFullName(data.get("fullName"));
         if (data.containsKey("phoneNumber")) user.setPhoneNumber(data.get("phoneNumber"));
@@ -37,9 +37,9 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    @CacheEvict(value = "users", key = "#email")
-    public void changePassword(String email, String oldPassword, String newPassword) {
-        User user = getProfile(email);
+    @CacheEvict(value = "users", allEntries = true)
+    public void changePassword(String identifier, String oldPassword, String newPassword) {
+        User user = getProfile(identifier);
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             throw new RuntimeException("Current password does not match");
         }
