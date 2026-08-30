@@ -55,15 +55,15 @@ public class BMartApplication {
                     userRepository.save(admin);
                 }
 
-                // 2. Seed Default Categories if empty
-                Category handbags = categoryRepository.findByCategoryName("Handbags & Purses")
-                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryName("Handbags & Purses").description("Luxury Handbags & Purses").build()));
-                Category travel = categoryRepository.findByCategoryName("Backpacks & Travel")
-                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryName("Backpacks & Travel").description("Travel Bags & Backpacks").build()));
-                Category tech = categoryRepository.findByCategoryName("Tech & Laptop Bags")
-                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryName("Tech & Laptop Bags").description("Laptop Bags & Tech Cases").build()));
-                Category fashion = categoryRepository.findByCategoryName("Fashion Accessories")
-                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryName("Fashion Accessories").description("Belts & Accessories").build()));
+                // 2. Seed Default Categories (IDs 1, 2, 3, 4) matching imported database records
+                Category travel = categoryRepository.findById(1L)
+                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(1L).categoryName("Backpacks & Travel").description("Backpacks & Travel Bags").build()));
+                Category handbags = categoryRepository.findById(2L)
+                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(2L).categoryName("Handbags & Purses").description("Luxury Handbags & Purses").build()));
+                Category tech = categoryRepository.findById(3L)
+                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(3L).categoryName("Travel Bags & Luggage").description("Travel Bags & Trolley Luggage").build()));
+                Category fashion = categoryRepository.findById(4L)
+                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(4L).categoryName("Fashion Accessories & Wallets").description("Wallets & Fashion Accessories").build()));
 
                 // 3. Seed Catalog Products if empty
                 if (productRepository.count() == 0) {
