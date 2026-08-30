@@ -3,6 +3,7 @@ FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
+ARG BUILD_ID=1
 RUN mvn clean package -DskipTests
 
 # Runtime Stage
