@@ -60,15 +60,26 @@ public class BMartApplication {
                     userRepository.save(admin);
                 }
 
-                // 2. Seed Default Categories (IDs 1, 2, 3, 4) matching imported database records
+                // 2. Seed & Update Categories (IDs 1, 2, 3, 4) to match DB records exactly
                 Category travel = categoryRepository.findById(1L)
-                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(1L).categoryName("Backpacks & Travel").description("Backpacks & Travel Bags").build()));
+                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(1L).categoryName("Backpacks").description("Backpacks & Laptop Bags").build()));
+                travel.setCategoryName("Backpacks");
+                categoryRepository.save(travel);
+
                 Category handbags = categoryRepository.findById(2L)
-                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(2L).categoryName("Handbags & Purses").description("Luxury Handbags & Purses").build()));
+                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(2L).categoryName("Handbags").description("Luxury Handbags").build()));
+                handbags.setCategoryName("Handbags");
+                categoryRepository.save(handbags);
+
                 Category tech = categoryRepository.findById(3L)
-                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(3L).categoryName("Travel Bags & Luggage").description("Travel Bags & Trolley Luggage").build()));
+                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(3L).categoryName("Travel Bags").description("Travel Bags & Duffles").build()));
+                tech.setCategoryName("Travel Bags");
+                categoryRepository.save(tech);
+
                 Category fashion = categoryRepository.findById(4L)
-                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(4L).categoryName("Fashion Accessories & Wallets").description("Wallets & Fashion Accessories").build()));
+                        .orElseGet(() -> categoryRepository.save(Category.builder().categoryId(4L).categoryName("Wallets").description("Wallets & Accessories").build()));
+                fashion.setCategoryName("Wallets");
+                categoryRepository.save(fashion);
 
                 // 3. Auto-import all 4 SQL product files (backpacks, handbags, travelbags, wallets)
                 try {
