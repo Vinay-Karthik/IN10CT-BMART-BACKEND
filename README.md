@@ -32,7 +32,7 @@ Review `src/main/resources/application.properties`:
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/ecommerce
 spring.datasource.username=root
-spring.datasource.password=Anil@3616
+spring.datasource.password=your_password
 ```
 
 ### 3. Build & Run
